@@ -1,0 +1,56 @@
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pad = n => String(n).padStart(2, '0');
+  const parseDate = v => v ? new Date(v) : null;
+  const dateKey = d => d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '';
+  const formatDate = d => d ? `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}` : '—';
+  const formatTime = d => d ? `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` : '—';
+  const displayDate = v => { const d = parseDate(v); return `<span>${formatTime(d)}</span><small>${formatDate(d)}</small>`; };
+  let data = { stations: [], outages: [], stats: {} }, currentFilter = 'all', visibleRows = [];
+  const pkOf = o => String(o.customerCode || '').trim().slice(0, 6).toUpperCase();
+
+  function run(name, args, done, failed) { if (typeof google === 'undefined' || !google.script) return; google.script.run.withSuccessHandler(done).withFailureHandler(e => { showNotice(e.message || e); if (failed) failed(e); })[name](...(args || [])); }
+  function showNotice(message) { const n = $('notice'); n.textContent = message || ''; n.classList.toggle('hidden', !message); }
+  function statusOf(o) {
+    const now = new Date(), start = parseDate(o.startDate), end = parseDate(o.restoreDate);
+    if (start && end && now >= start && now <= end) return {key:'current', label:'Đang cúp', icon:'●'};
+    if (start && now < start && start - now <= 86400000) return {key:'upcoming', label:'Sắp cúp', sub:'(Trong 24h)', icon:'◷'};
+    if (start && now < start) return {key:'scheduled', label:'Theo lịch', icon:'▣'};
+    return {key:'past', label:'Đã qua thời gian cúp', icon:'●'};
+  }
+  function findStation(o) { return data.stations.find(s => String(s.meterCode||'') === String(o.customerCode||'') || String(s.id||'') === String(o.siteId||'')) || {}; }
+  function renderStats() {
+    const all = data.outages || [], active = all.filter(o => statusOf(o).key === 'current').length, upcoming = all.filter(o => ['upcoming','scheduled'].includes(statusOf(o).key)).length;
+    const cards = [['Tổng số trạm BTS', data.stations.length, 'Trong danh sách'], ['Lịch cúp điện', all.length, 'Đồng Nai'], ['Đang cúp', active, 'Hiện tại'], ['Sắp cúp', upcoming, 'Dự kiến'], ['Hôm nay', all.filter(o => dateKey(parseDate(o.startDate)) === dateKey(new Date())).length, 'Lịch trong ngày'], ['7 ngày tới', all.length, 'Dự kiến']];
+    $('stats').innerHTML = cards.map(c => `<div class="stat"><label>${c[0]}</label><strong>${c[1]}</strong><small>${c[2]}</small></div>`).join('');
+  }
+  function populateDistricts() {
+    const values = [...new Set(data.outages.map(o => o.district).filter(Boolean))].sort();
+    $('district').innerHTML = '<option value="">Tất cả</option>' + values.map(v => `<option>${esc(v)}</option>`).join('');
+  }
+  function render() {
+    const q = ($('search').value || '').trim().toLowerCase(), district = $('district').value, today = dateKey(new Date()), tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate()+1); const tomorrow = dateKey(tomorrowDate);
+    visibleRows = (data.outages || []).map(o => ({o, s:findStation(o), st:statusOf(o)})).filter(x => {
+      const text = [x.o.customerCode,x.o.siteId,x.o.location,x.s.id,x.s.code,x.s.name].join(' ').toLowerCase(); const day = dateKey(parseDate(x.o.startDate));
+      return (!q || text.includes(q)) && (!district || x.o.district === district) && (currentFilter === 'all' || (currentFilter === 'active' && x.st.key === 'current') || (currentFilter === 'today' && day === today) || (currentFilter === 'tomorrow' && day === tomorrow));
+    }).sort((a,b) => (parseDate(a.o.startDate)||0) - (parseDate(b.o.startDate)||0));
+    $('resultCount').textContent = `${visibleRows.length} kết quả phù hợp`;
+    $('empty').classList.toggle('hidden', visibleRows.length > 0); $('tableBody').innerHTML = visibleRows.map((x,i) => `<tr><td><span class="status-badge status-${x.st.key}"><b>${x.st.icon} ${x.st.label}</b>${x.st.sub ? `<small>${x.st.sub}</small>` : ''}</span></td><td><div class="station-vt">${esc(x.s.id || x.o.siteId || '—')}</div><div class="station-bho">${esc(x.s.code || '—')}</div><div class="station-name">${esc(x.s.name || '')}</div></td><td class="time-cell">${displayDate(x.o.startDate)}</td><td class="time-cell">${displayDate(x.o.restoreDate)}</td><td>Đồng Nai</td><td><span class="customer-code">${esc(x.o.customerCode || '—')}</span></td><td class="location-cell">${esc(x.o.location || '—')}</td><td class="reason-cell">${esc(x.o.reason || '—')}</td><td><button class="button secondary" data-view="${i}">Xem</button></td></tr>`).join('');
+    document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => detail(Number(b.dataset.view)));
+  }
+  function detail(i) { const x = visibleRows[i]; if (!x) return; $('modalBody').innerHTML = `<h2>${esc(x.s.id || x.o.siteId || 'Trạm BTS')}</h2><p class="muted">${esc(x.s.code || '')} ${esc(x.s.name || '')}</p><p><b>Trạng thái:</b> ${esc(x.st.label)}</p><p><b>Mã khách hàng:</b> <span class="customer-code">${esc(x.o.customerCode)}</span></p><p><b>Bắt đầu:</b> ${formatTime(parseDate(x.o.startDate))} ${formatDate(parseDate(x.o.startDate))}</p><p><b>Dự kiến đóng điện:</b> ${formatTime(parseDate(x.o.restoreDate))} ${formatDate(parseDate(x.o.restoreDate))}</p><p><b>Địa điểm:</b> ${esc(x.o.location || '—')}</p><p><b>Lý do:</b> ${esc(x.o.reason || '—')}</p>`; $('modal').classList.remove('hidden'); }
+  function load(syncFirst = true) {
+    const read = () => run('getDashboardData', [], result => { data = result || data; showNotice(''); renderStats(); populateDistricts(); render(); });
+    if (syncFirst) run('syncOutages', [], read, () => read()); else read();
+  }
+  function exportCsv() { run('exportData', [], csv => { if (!csv) return showNotice('Không tạo được file CSV.'); const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `lich-cup-dien-${dateKey(new Date())}.csv`; a.click(); URL.revokeObjectURL(a.href); }); }
+  document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { currentFilter = b.dataset.filter; document.querySelectorAll('[data-filter]').forEach(x => x.classList.toggle('active', x === b)); render(); });
+  $('applyBtn').onclick = render; $('search').onkeydown = e => { if (e.key === 'Enter') render(); }; $('exportBtn').onclick = exportCsv; $('topExportBtn').onclick = exportCsv;
+  $('refreshBtn').onclick = () => { $('refreshBtn').disabled = true; load(true); setTimeout(() => $('refreshBtn').disabled = false, 20000); };
+  $('closeModal').onclick = () => $('modal').classList.add('hidden'); $('modal').onclick = e => { if (e.target === $('modal')) $('modal').classList.add('hidden'); };
+  load();
+})();
+</script>

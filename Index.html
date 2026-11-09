@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BTS Đồng Nai - Power Outage Monitor</title>
+  <?!= include('CSS'); ?>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">⚡</span><div><b>BTS Đồng Nai</b><small>Power Monitor</small></div></div>
+    <nav>
+      <a class="active" href="#">Tổng quan</a>
+      <a href="#stations">Danh sách trạm</a>
+      <a href="#outages">Lịch cúp điện</a>
+    </nav>
+    <div class="sidebar-foot">Theo dõi lịch ngừng giảm cung cấp điện<br>EVNSPC · Đồng Nai</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><div class="eyebrow">TRUNG TÂM GIÁM SÁT</div><h1>Lịch cúp điện ảnh hưởng trạm BTS</h1></div>
+      <div class="actions"><button id="refreshBtn" class="button secondary">↻ Cập nhật</button><button id="topExportBtn" class="button primary">↓ Xuất CSV</button></div>
+    </header>
+    <div id="notice" class="notice hidden"></div>
+    <section id="stats" class="stats"></section>
+
+    <section class="filter-panel" id="stations">
+      <div class="filter-head"><div class="filter-title">⚑ BỘ LỌC TRA CỨU THÔNG MINH</div><span>BỘ LỌC NÂNG CAO</span></div>
+      <div class="filter-pills">
+        <button class="filter-pill active" data-filter="all">▦ Tất cả</button>
+        <button class="filter-pill" data-filter="active">● Đang cúp</button>
+        <button class="filter-pill" data-filter="today">▣ Hôm nay</button>
+        <button class="filter-pill" data-filter="tomorrow">▣ Ngày mai</button>
+      </div>
+      <div class="advanced-filters">
+        <label>Tỉnh / Thành phố<select id="province"><option value="Đồng Nai">Đồng Nai</option></select></label>
+        <label>Quận / Huyện<select id="district"><option value="">Tất cả</option></select></label>
+        <label>Mã KH hoặc Site ID<input id="search" placeholder="Nhập mã KH hoặc Site ID..."></label>
+        <button id="applyBtn" class="button primary">⚑ Áp dụng</button>
+        <button id="exportBtn" class="button export">↓ Tải CSV</button>
+      </div>
+    </section>
+
+    <section class="panel" id="outages">
+      <div class="panel-head"><div><h2>Danh sách lịch cúp điện</h2><p id="resultCount" class="result-count">Đang tải dữ liệu...</p></div><span class="live"><i></i>Dữ liệu trực tiếp</span></div>
+      <div class="table-wrap"><table class="monitor-table"><thead><tr><th>TRẠNG THÁI</th><th>TRẠM VT</th><th>THỜI GIAN BẮT ĐẦU</th><th>DỰ KIẾN ĐÓNG ĐIỆN</th><th>TỈNH</th><th>MÃ PK</th><th>ĐỊA ĐIỂM</th><th>LÝ DO</th><th></th></tr></thead><tbody id="tableBody"></tbody></table></div>
+      <div id="empty" class="empty hidden">Chưa có lịch cúp điện phù hợp.</div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="close">×</button><div id="modalBody"></div></div></div>
+  <?!= include('JavaScript'); ?>
+</body>
+</html>
