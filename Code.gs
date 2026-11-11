@@ -1,4 +1,11 @@
 function doGet() {
+  if (CONFIG.MAINTENANCE_MODE) {
+    return HtmlService.createTemplateFromFile('Maintenance')
+      .evaluate()
+      .setTitle('Hệ thống đang bảo trì')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
     .setTitle('BTS Đồng Nai – Power Outage Monitor')
