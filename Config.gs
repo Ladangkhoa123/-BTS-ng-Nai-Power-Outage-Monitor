@@ -6,6 +6,7 @@ const CONFIG = {
   // Set this to the Google Spreadsheet ID that contains the imported workbook.
   SPREADSHEET_ID: PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || '15FWty4E1dZg67EdKypT1LAdp98Mj489xvY1GP8Gzcm4',
   BTS_SHEET_NAME: 'Danh sách trạm BTS',
+  BTS_VINH_CUU_SHEET_NAME: 'Sheet2',
   GENERATOR_SHEET_NAME: 'Danh sách máy phát',
   OUTAGE_SHEET_NAME: 'PowerOutages',
   API_URL: 'https://cskh.evnspc.vn/TraCuu/GetThongTinLichNgungGiamCungCapDien',
